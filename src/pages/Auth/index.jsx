@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
-import { useAuth, useToast } from '../../context/index';
-import { getErr } from '../../utils/index';
-import { PasswordInput } from '../../components/common/index.jsx';
-import { authService } from '../../services/index';
+import { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { useAuth, useToast } from "../../context/index";
+import { getErr } from "../../utils/index";
+import { PasswordInput } from "../../components/common/index.jsx";
+import { authService } from "../../services/index";
 
 const Logo = () => (
   <div className="auth-logo">
@@ -13,6 +13,177 @@ const Logo = () => (
     <span className="auth-logo-text">ShopFlow</span>
   </div>
 );
+
+// ---- Reset Password ----
+export const ResetPassword = () => {
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const [showPwd, setShowPwd] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const f = useFormik({
+    initialValues: { newPassword: "", confirmPassword: "" },
+    validationSchema: Yup.object({
+      newPassword: Yup.string().min(8, "Min 8 characters").required("Required"),
+      confirmPassword: Yup.string()
+        .oneOf([Yup.ref("newPassword")], "Passwords must match")
+        .required("Required"),
+    }),
+    onSubmit: async (vals, { setSubmitting }) => {
+      try {
+        await authService.resetPassword({
+          token,
+          newPassword: vals.newPassword,
+        });
+        setDone(true);
+        toast.success("Password reset successfully!");
+      } catch (e) {
+        toast.error("Error", getErr(e));
+      }
+      setSubmitting(false);
+    },
+  });
+
+  if (!token)
+    return (
+      <div className="auth-page">
+        <div className="auth-bg" />
+        <div className="auth-box" style={{ textAlign: "center" }}>
+          <Logo />
+          <div style={{ fontSize: 52, marginBottom: 14 }}>⚠️</div>
+          <h1 className="auth-title">Invalid Link</h1>
+          <p className="auth-subtitle">
+            This reset link is invalid or has expired.
+          </p>
+          <button
+            className="btn btn-primary btn-full"
+            style={{ marginTop: 20 }}
+            onClick={() => navigate("/forgot-password")}
+          >
+            Request New Link
+          </button>
+          <Link
+            to="/login"
+            className="btn btn-ghost btn-full"
+            style={{ marginTop: 10 }}
+          >
+            Back to Login
+          </Link>
+        </div>
+      </div>
+    );
+
+  if (done)
+    return (
+      <div className="auth-page">
+        <div className="auth-bg" />
+        <div className="auth-box" style={{ textAlign: "center" }}>
+          <Logo />
+          <div style={{ fontSize: 52, marginBottom: 14 }}>✅</div>
+          <h1 className="auth-title">Password Reset!</h1>
+          <p className="auth-subtitle">
+            Your password has been updated successfully.
+          </p>
+          <button
+            className="btn btn-primary btn-full"
+            style={{ marginTop: 20 }}
+            onClick={() => navigate("/login")}
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+
+  return (
+    <div className="auth-page">
+      <div className="auth-bg" />
+      <div className="auth-box">
+        <Logo />
+        <h1 className="auth-title">Reset Password</h1>
+        <p className="auth-subtitle">Enter your new password below</p>
+        <form onSubmit={f.handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">New Password</label>
+            <div className="input-wrap">
+              <span className="input-icon">🔒</span>
+              <input
+                type={showPwd ? "text" : "password"}
+                name="newPassword"
+                className={`form-control ${
+                  f.touched.newPassword && f.errors.newPassword ? "error" : ""
+                }`}
+                placeholder="Min 8 characters"
+                value={f.values.newPassword}
+                onChange={f.handleChange}
+                onBlur={f.handleBlur}
+              />
+              <span
+                className="input-suffix"
+                onClick={() => setShowPwd(!showPwd)}
+              >
+                {showPwd ? "🙈" : "👁️"}
+              </span>
+            </div>
+            {f.touched.newPassword && f.errors.newPassword && (
+              <span className="form-error">{f.errors.newPassword}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Confirm Password</label>
+            <div className="input-wrap">
+              <span className="input-icon">🔒</span>
+              <input
+                type={showConfirm ? "text" : "password"}
+                name="confirmPassword"
+                className={`form-control ${
+                  f.touched.confirmPassword && f.errors.confirmPassword
+                    ? "error"
+                    : ""
+                }`}
+                placeholder="Re-enter new password"
+                value={f.values.confirmPassword}
+                onChange={f.handleChange}
+                onBlur={f.handleBlur}
+              />
+              <span
+                className="input-suffix"
+                onClick={() => setShowConfirm(!showConfirm)}
+              >
+                {showConfirm ? "🙈" : "👁️"}
+              </span>
+            </div>
+            {f.touched.confirmPassword && f.errors.confirmPassword && (
+              <span className="form-error">{f.errors.confirmPassword}</span>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className={`btn btn-primary btn-full btn-lg ${
+              f.isSubmitting ? "btn-loading" : ""
+            }`}
+            disabled={f.isSubmitting}
+          >
+            <span className="btn-text">Reset Password</span>
+          </button>
+
+          <Link
+            to="/login"
+            className="btn btn-ghost btn-full"
+            style={{ marginTop: 10 }}
+          >
+            Back to Login
+          </Link>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 // ---- Login ----
 export const Login = () => {
@@ -22,15 +193,21 @@ export const Login = () => {
   const [showPwd, setShowPwd] = useState(false);
 
   const f = useFormik({
-    initialValues: { email: '', password: '' },
-    validationSchema: Yup.object({ email: Yup.string().email('Invalid email').required('Required'), password: Yup.string().required('Required') }),
+    initialValues: { email: "", password: "" },
+    validationSchema: Yup.object({
+      email: Yup.string().email("Invalid email").required("Required"),
+      password: Yup.string().required("Required"),
+    }),
     onSubmit: async (vals, { setSubmitting }) => {
       try {
         await login(vals.email, vals.password);
-        toast.success('Welcome back! 👋');
-        navigate('/');
-      } catch (e) { toast.error('Login failed', getErr(e)); }
-      finally { setSubmitting(false); }
+        toast.success("Welcome back! 👋");
+        navigate("/");
+      } catch (e) {
+        toast.error("Login failed", getErr(e));
+      } finally {
+        setSubmitting(false);
+      }
     },
   });
 
@@ -46,29 +223,72 @@ export const Login = () => {
             <label className="form-label">Email</label>
             <div className="input-wrap">
               <span className="input-icon">📧</span>
-              <input type="email" name="email" className={`form-control ${f.touched.email && f.errors.email ? 'error' : ''}`} placeholder="you@example.com" value={f.values.email} onChange={f.handleChange} onBlur={f.handleBlur} />
+              <input
+                type="email"
+                name="email"
+                className={`form-control ${
+                  f.touched.email && f.errors.email ? "error" : ""
+                }`}
+                placeholder="you@example.com"
+                value={f.values.email}
+                onChange={f.handleChange}
+                onBlur={f.handleBlur}
+              />
             </div>
-            {f.touched.email && f.errors.email && <span className="form-error">{f.errors.email}</span>}
+            {f.touched.email && f.errors.email && (
+              <span className="form-error">{f.errors.email}</span>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">Password</label>
             <div className="input-wrap">
               <span className="input-icon">🔒</span>
-              <input type={showPwd ? 'text' : 'password'} name="password" className={`form-control ${f.touched.password && f.errors.password ? 'error' : ''}`} placeholder="••••••••" value={f.values.password} onChange={f.handleChange} onBlur={f.handleBlur} />
-              <span className="input-suffix" onClick={() => setShowPwd(!showPwd)}>{showPwd ? '🙈' : '👁️'}</span>
+              <input
+                type={showPwd ? "text" : "password"}
+                name="password"
+                className={`form-control ${
+                  f.touched.password && f.errors.password ? "error" : ""
+                }`}
+                placeholder="••••••••"
+                value={f.values.password}
+                onChange={f.handleChange}
+                onBlur={f.handleBlur}
+              />
+              <span
+                className="input-suffix"
+                onClick={() => setShowPwd(!showPwd)}
+              >
+                {showPwd ? "🙈" : "👁️"}
+              </span>
             </div>
-            {f.touched.password && f.errors.password && <span className="form-error">{f.errors.password}</span>}
+            {f.touched.password && f.errors.password && (
+              <span className="form-error">{f.errors.password}</span>
+            )}
           </div>
-          <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
+          <div
+            className="flex justify-between items-center"
+            style={{ marginBottom: 18 }}
+          >
             <span />
-            <Link to="/forgot-password" className="auth-link text-sm">Forgot password?</Link>
+            <Link to="/forgot-password" className="auth-link text-sm">
+              Forgot password?
+            </Link>
           </div>
-          <button type="submit" className={`btn btn-primary btn-full btn-lg ${f.isSubmitting ? 'btn-loading' : ''}`} disabled={f.isSubmitting}>
+          <button
+            type="submit"
+            className={`btn btn-primary btn-full btn-lg ${
+              f.isSubmitting ? "btn-loading" : ""
+            }`}
+            disabled={f.isSubmitting}
+          >
             <span className="btn-text">Sign In</span>
           </button>
         </form>
         <p className="text-muted text-sm text-center" style={{ marginTop: 20 }}>
-          Don't have an account? <Link to="/register" className="auth-link">Register</Link>
+          Don't have an account?{" "}
+          <Link to="/register" className="auth-link">
+            Register
+          </Link>
         </p>
       </div>
     </div>
@@ -82,24 +302,40 @@ export const Register = () => {
   const navigate = useNavigate();
 
   const f = useFormik({
-    initialValues: { name: '', email: '', phone: '', password: '', confirmPassword: '' },
+    initialValues: {
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+    },
     validationSchema: Yup.object({
-      name: Yup.string().required('Name required'),
-      email: Yup.string().email('Invalid email').required('Required'),
-      password: Yup.string().min(6, 'Min 6 characters').required('Required'),
-      confirmPassword: Yup.string().oneOf([Yup.ref('password')], 'Passwords must match').required('Required'),
+      name: Yup.string().required("Name required"),
+      email: Yup.string().email("Invalid email").required("Required"),
+      password: Yup.string().min(6, "Min 6 characters").required("Required"),
+      confirmPassword: Yup.string()
+        .oneOf([Yup.ref("password")], "Passwords must match")
+        .required("Required"),
     }),
     onSubmit: async (vals, { setSubmitting }) => {
       try {
-        const { authService } = await import('../../services/index');
-        const res = await authService.register({ name: vals.name, email: vals.email, phone: vals.phone, password: vals.password });
+        const { authService } = await import("../../services/index");
+        const res = await authService.register({
+          name: vals.name,
+          email: vals.email,
+          phone: vals.phone,
+          password: vals.password,
+        });
         const { token } = res.data.data;
-        localStorage.setItem('sf_token', token);
-        toast.success('Account created! 🎉');
-        navigate('/');
-        window.location.reload(); // reload to init cart context
-      } catch (e) { toast.error('Registration failed', getErr(e)); }
-      finally { setSubmitting(false); }
+        localStorage.setItem("sf_token", token);
+        toast.success("Account created! 🎉");
+        navigate("/");
+        window.location.reload();
+      } catch (e) {
+        toast.error("Registration failed", getErr(e));
+      } finally {
+        setSubmitting(false);
+      }
     },
   });
 
@@ -115,33 +351,88 @@ export const Register = () => {
             <label className="form-label">Full Name</label>
             <div className="input-wrap">
               <span className="input-icon">👤</span>
-              <input type="text" name="name" className={`form-control ${f.touched.name && f.errors.name ? 'error' : ''}`} placeholder="John Doe" value={f.values.name} onChange={f.handleChange} onBlur={f.handleBlur} />
+              <input
+                type="text"
+                name="name"
+                className={`form-control ${
+                  f.touched.name && f.errors.name ? "error" : ""
+                }`}
+                placeholder="John Doe"
+                value={f.values.name}
+                onChange={f.handleChange}
+                onBlur={f.handleBlur}
+              />
             </div>
-            {f.touched.name && f.errors.name && <span className="form-error">{f.errors.name}</span>}
+            {f.touched.name && f.errors.name && (
+              <span className="form-error">{f.errors.name}</span>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">Email</label>
             <div className="input-wrap">
               <span className="input-icon">📧</span>
-              <input type="email" name="email" className={`form-control ${f.touched.email && f.errors.email ? 'error' : ''}`} placeholder="you@example.com" value={f.values.email} onChange={f.handleChange} onBlur={f.handleBlur} />
+              <input
+                type="email"
+                name="email"
+                className={`form-control ${
+                  f.touched.email && f.errors.email ? "error" : ""
+                }`}
+                placeholder="you@example.com"
+                value={f.values.email}
+                onChange={f.handleChange}
+                onBlur={f.handleBlur}
+              />
             </div>
-            {f.touched.email && f.errors.email && <span className="form-error">{f.errors.email}</span>}
+            {f.touched.email && f.errors.email && (
+              <span className="form-error">{f.errors.email}</span>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">Phone (optional)</label>
             <div className="input-wrap">
               <span className="input-icon">📱</span>
-              <input type="tel" name="phone" className="form-control" placeholder="+91 98765 43210" value={f.values.phone} onChange={f.handleChange} />
+              <input
+                type="tel"
+                name="phone"
+                className="form-control"
+                placeholder="+91 98765 43210"
+                value={f.values.phone}
+                onChange={f.handleChange}
+              />
             </div>
           </div>
-          <PasswordInput label="Password" name="password" placeholder="Min 6 characters" value={f.values.password} onChange={f.handleChange} error={f.touched.password && f.errors.password} />
-          <PasswordInput label="Confirm Password" name="confirmPassword" placeholder="Re-enter password" value={f.values.confirmPassword} onChange={f.handleChange} error={f.touched.confirmPassword && f.errors.confirmPassword} />
-          <button type="submit" className={`btn btn-primary btn-full btn-lg ${f.isSubmitting ? 'btn-loading' : ''}`} disabled={f.isSubmitting} style={{ marginTop: 8 }}>
+          <PasswordInput
+            label="Password"
+            name="password"
+            placeholder="Min 6 characters"
+            value={f.values.password}
+            onChange={f.handleChange}
+            error={f.touched.password && f.errors.password}
+          />
+          <PasswordInput
+            label="Confirm Password"
+            name="confirmPassword"
+            placeholder="Re-enter password"
+            value={f.values.confirmPassword}
+            onChange={f.handleChange}
+            error={f.touched.confirmPassword && f.errors.confirmPassword}
+          />
+          <button
+            type="submit"
+            className={`btn btn-primary btn-full btn-lg ${
+              f.isSubmitting ? "btn-loading" : ""
+            }`}
+            disabled={f.isSubmitting}
+            style={{ marginTop: 8 }}
+          >
             <span className="btn-text">Create Account</span>
           </button>
         </form>
         <p className="text-muted text-sm text-center" style={{ marginTop: 20 }}>
-          Already have an account? <Link to="/login" className="auth-link">Sign In</Link>
+          Already have an account?{" "}
+          <Link to="/login" className="auth-link">
+            Sign In
+          </Link>
         </p>
       </div>
     </div>
@@ -154,15 +445,20 @@ export const ForgotPassword = () => {
   const [sent, setSent] = useState(false);
 
   const f = useFormik({
-    initialValues: { email: '' },
-    validationSchema: Yup.object({ email: Yup.string().email('Invalid email').required('Required') }),
+    initialValues: { email: "" },
+    validationSchema: Yup.object({
+      email: Yup.string().email("Invalid email").required("Required"),
+    }),
     onSubmit: async (vals, { setSubmitting }) => {
       try {
         await authService.forgotPassword(vals);
         setSent(true);
-        toast.success('Reset link sent!');
-      } catch (e) { toast.error('Error', getErr(e)); }
-      finally { setSubmitting(false); }
+        toast.success("Reset link sent!");
+      } catch (e) {
+        toast.error("Error", getErr(e));
+      } finally {
+        setSubmitting(false);
+      }
     },
   });
 
@@ -174,10 +470,21 @@ export const ForgotPassword = () => {
         <h1 className="auth-title">Forgot Password?</h1>
         <p className="auth-subtitle">We'll send you a reset link</p>
         {sent ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
             <div style={{ fontSize: 52, marginBottom: 14 }}>📧</div>
-            <p className="text-muted" style={{ fontSize: 13.5, lineHeight: 1.6 }}>Check your email for the reset link. It expires in 10 minutes.</p>
-            <Link to="/login" className="btn btn-outline" style={{ marginTop: 20, display: 'inline-flex' }}>Back to Login</Link>
+            <p
+              className="text-muted"
+              style={{ fontSize: 13.5, lineHeight: 1.6 }}
+            >
+              Check your email for the reset link. It expires in 10 minutes.
+            </p>
+            <Link
+              to="/login"
+              className="btn btn-outline"
+              style={{ marginTop: 20, display: "inline-flex" }}
+            >
+              Back to Login
+            </Link>
           </div>
         ) : (
           <form onSubmit={f.handleSubmit}>
@@ -185,14 +492,38 @@ export const ForgotPassword = () => {
               <label className="form-label">Email Address</label>
               <div className="input-wrap">
                 <span className="input-icon">📧</span>
-                <input type="email" name="email" className={`form-control ${f.touched.email && f.errors.email ? 'error' : ''}`} placeholder="you@example.com" value={f.values.email} onChange={f.handleChange} onBlur={f.handleBlur} />
+                <input
+                  type="email"
+                  name="email"
+                  className={`form-control ${
+                    f.touched.email && f.errors.email ? "error" : ""
+                  }`}
+                  placeholder="you@example.com"
+                  value={f.values.email}
+                  onChange={f.handleChange}
+                  onBlur={f.handleBlur}
+                />
               </div>
-              {f.touched.email && f.errors.email && <span className="form-error">{f.errors.email}</span>}
+              {f.touched.email && f.errors.email && (
+                <span className="form-error">{f.errors.email}</span>
+              )}
             </div>
-            <button type="submit" className={`btn btn-primary btn-full ${f.isSubmitting ? 'btn-loading' : ''}`} disabled={f.isSubmitting}>
+            <button
+              type="submit"
+              className={`btn btn-primary btn-full ${
+                f.isSubmitting ? "btn-loading" : ""
+              }`}
+              disabled={f.isSubmitting}
+            >
               <span className="btn-text">Send Reset Link</span>
             </button>
-            <Link to="/login" className="btn btn-ghost btn-full" style={{ marginTop: 10 }}>Back to Login</Link>
+            <Link
+              to="/login"
+              className="btn btn-ghost btn-full"
+              style={{ marginTop: 10 }}
+            >
+              Back to Login
+            </Link>
           </form>
         )}
       </div>
