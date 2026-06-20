@@ -187,9 +187,34 @@ export const CheckoutPage = () => {
         </div>
 
         {(paymentMethod === 'qr' || paymentMethod === 'upi') && (
-          <div className="form-group" style={{ marginTop: 16 }}>
-            <label className="form-label">Transaction Reference *</label>
-            <input className="form-control" placeholder="Enter transaction ID" value={transactionRef} onChange={(e) => setTransactionRef(e.target.value)} />
+          <div style={{ marginTop: 16, textAlign: 'center', background: 'var(--card2)', borderRadius: 10, padding: 18, border: '1px solid var(--border)' }}>
+            {paymentMethod === 'qr' && (
+              cart.shop?.paymentQr ? (
+                <img
+                  src={imgUrl(cart.shop.paymentQr)}
+                  alt="Payment QR"
+                  style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 8, background: '#fff', padding: 8 }}
+                />
+              ) : (
+                <p className="text-muted text-xs">QR code not available for this shop. Please choose another payment method.</p>
+              )
+            )}
+
+            {cart.shop?.upiId && (
+              <p style={{ fontSize: 14, fontWeight: 600, marginTop: paymentMethod === 'qr' ? 12 : 0 }}>
+                UPI ID: <span style={{ color: 'var(--primary)' }}>{cart.shop.upiId}</span>
+              </p>
+            )}
+
+            <div style={{ marginTop: 12, display: 'inline-block', padding: '8px 18px', borderRadius: 8, background: 'rgba(79,70,229,0.1)', border: '1px solid var(--border-active)' }}>
+              <span className="text-muted text-xs">Amount to Pay: </span>
+              <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{fmt(cart.total)}</span>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 16, textAlign: 'left' }}>
+              <label className="form-label">Transaction Reference *</label>
+              <input className="form-control" placeholder="Enter transaction ID" value={transactionRef} onChange={(e) => setTransactionRef(e.target.value)} />
+            </div>
           </div>
         )}
       </div>
